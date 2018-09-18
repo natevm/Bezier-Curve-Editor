@@ -1,0 +1,37 @@
+/* Global CSS Variables */
+:root {
+    --LandscapeTotalHeight: 100%;
+    --LandscapeColumnHeight: 45vw;
+    /* These three variables should add up to column height */
+    --LandscapeRow1Height: 5vw;
+    --LandscapeRow2Height: 33vw;
+    --LandscapeRow3Height: 7vw;
+    --LandscapeRow2And3Height: 40vw;
+    --LandscapeColumnRightPad: 2vw;
+  
+    --LandscapeBRDFPresetsHeight: 30vw;
+    --LandscapeInstructionsHeight: 15vw;
+  
+    --PortraitTotalHeight: 245vw;
+    --PortraitColumnHeight: 245vw;
+      /* These three variables should add up to column height */
+    --PortraitRow1Height: 10vw;
+    --PortraitRow2Height: 120vw;
+    --PortraitRow3Height: 120vw;
+ }
+
+html, body {
+    width: 100%;
+    height: var(--LandscapeTotalHeight);
+}
+
+canvas {
+    width: 100%;
+    height : 100%;
+}
+
+#GUI {
+    position: absolute;
+    top: 0;
+    left: 0;
+}

@@ -1,6 +1,31 @@
-<html>
-<header><title>This is title</title></header>
+<html id="myvideo">
+    <header>
+    	<title>Bezier Curve Editor</title>
+    	<link rel="stylesheet" href="./Styles/reset.css">
+    	<link rel="stylesheet" href="./Styles/flexbox.css">
+    	<link rel="stylesheet" href="./Styles/fonts.css">
+    	<link rel="stylesheet" href="./Styles/colors.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+    	<meta charset="utf-8"/>
+    </header>
 <body>
-Hello world
+    <canvas id="glCanvas"></canvas>
+    <div id=GUI>
+        <button type="button" onclick="GoFullscreen();">Click Me!</button>
+    </div>
 </body>
+    <script src="./Scripts/gl-matrix.js"></script>
+    <script type="module" src="./Scripts/main.js"></script>
 </html>
+<script>
+    function GoFullscreen() {
+        var elem = document.getElementById("myvideo");
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullScreen) {
+            elem.webkitRequestFullScreen();
+        }
+    }
+</script>
