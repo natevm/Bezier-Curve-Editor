@@ -1,5 +1,8 @@
+import { Curve } from "./Curve.js"
+
 class CurveEditor {
     constructor() {
+        this.testCurve = new Curve();
         this.cubeRotation = 0.0;
         this.then = 0.0;
         const canvas = document.querySelector('#glcanvas');
@@ -13,88 +16,61 @@ class CurveEditor {
         this.resize(canvas)
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
 
-        // Vertex shader program
-        const vsSource = `
-            attribute vec4 aCurrentPosition;
-            attribute vec4 aNextPosition;
-            attribute float aDirection;
-            attribute vec4 aColor;
-            uniform mat4 uModelViewMatrix;
-            uniform mat4 uProjectionMatrix;
-            uniform float uThickness;
-            uniform float uAspect;
-            varying lowp vec4 vColor;
-
-            uniform int uNumControlPoints;
-            uniform vec4 uControlPoints[128];
-
-            void main(void) {
-            mat4 projViewModel = uProjectionMatrix * uModelViewMatrix;
-
-            //into clip space
-            vec4 currentProjected = projViewModel * aCurrentPosition;
-            vec4 nextProjected = projViewModel * aNextPosition;
-
-            //into NDC space [-1 .. 1]
-            vec2 currentScreen = currentProjected.xy / currentProjected.w;
-            vec2 nextScreen = nextProjected.xy / nextProjected.w;
-
-            //correct for aspect ratio (screenWidth / screenHeight)
-            currentScreen.x *= uAspect;
-            nextScreen.x *= uAspect;
-
-            //normal of line (B - A)
-            vec2 dir = normalize(nextScreen - currentScreen);
-            vec2 normal = vec2(-dir.y, dir.x);
-
-            //extrude from center & correct aspect ratio
-            normal *= uThickness/2.0;
-            normal.x /= uAspect;
-
-            //offset by the direction of this point in the pair (-1 or 1)
-            vec4 offset = vec4(normal * aDirection, 0.0, 1.0);
-            gl_Position = currentProjected + offset;
-            vColor = aColor;
-            }
-        `;
-
         // Fragment shader program
 
-        const fsSource = `
-            varying lowp vec4 vColor;
-            void main(void) {
-            gl_FragColor = vColor;
+        let fsSource = "";
+        let vsSource = "";
+
+        let promises = [];
+        promises.push($.ajax({
+            url: "./Shaders/Bezier.vs",
+            success: function (result) {
+                vsSource = result.trim();
+            }, error: function (result) {
+                console.log("failed to load Bezier.vs with error ");
+                console.log(result);
             }
-        `;
+        }));
+        promises.push($.ajax({
+            url: "./Shaders/Bezier.fs",
+            success: function (result) {
+                fsSource = result.trim();
+            }, error: function (result) {
+                console.log("failed to load Bezier.fs with error ");
+                console.log(result);
+            }
+        }));
 
-        // Initialize a shader program; this is where all the lighting
-        // for the vertices and so forth is established.
-        this.shaderProgram = this.initShaderProgram(this.gl, vsSource, fsSource);
+        Promise.all(promises).then(() => {
 
-        // Collect all the info needed to use the shader program.
-        // Look up which attributes our shader program is using
-        // for aCurrentPosition, aVevrtexColor and also
-        // look up uniform locations.
-        this.programInfo = {
-            program: this.shaderProgram,
-            attribLocations: {
-                currentPosition: this.gl.getAttribLocation(this.shaderProgram, 'aCurrentPosition'),
-                nextPosition: this.gl.getAttribLocation(this.shaderProgram, 'aNextPosition'),
-                direction: this.gl.getAttribLocation(this.shaderProgram, 'aDirection'),
-                vertexColor: this.gl.getAttribLocation(this.shaderProgram, 'aColor'),
-            },
-            uniformLocations: {
-                projectionMatrix: this.gl.getUniformLocation(this.shaderProgram, 'uProjectionMatrix'),
-                modelViewMatrix: this.gl.getUniformLocation(this.shaderProgram, 'uModelViewMatrix'),
-                thickness: this.gl.getUniformLocation(this.shaderProgram, 'uThickness'),
-                aspect: this.gl.getUniformLocation(this.shaderProgram, 'uAspect'),
+            // Initialize a shader program; this is where all the lighting
+            // for the vertices and so forth is established.
+            this.shaderProgram = this.initShaderProgram(this.gl, vsSource, fsSource);
 
-                numControlPoints: this.gl.getUniformLocation(this.shaderProgram, 'uNumControlPoints'),
-                controlPoints: this.gl.getUniformLocation(this.shaderProgram, 'uControlPoints'),
-            },
-        };
+            // Collect all the info needed to use the shader program.
+            // Look up which attributes our shader program is using
+            // for aposition, aVevrtexColor and also
+            // look up uniform locations.
+            this.programInfo = {
+                program: this.shaderProgram,
+                attribLocations: {
+                    t: this.gl.getAttribLocation(this.shaderProgram, 't'),
+                    direction: this.gl.getAttribLocation(this.shaderProgram, 'direction'),
+                },
+                uniformLocations: {
+                    projection: this.gl.getUniformLocation(this.shaderProgram, 'projection'),
+                    modelView: this.gl.getUniformLocation(this.shaderProgram, 'modelView'),
+                    thickness: this.gl.getUniformLocation(this.shaderProgram, 'thickness'),
+                    aspect: this.gl.getUniformLocation(this.shaderProgram, 'aspect'),
+                    miter: this.gl.getUniformLocation(this.shaderProgram, 'miter'),
+                    numControlPoints: this.gl.getUniformLocation(this.shaderProgram, 'uNumControlPoints'),
+                    controlPoints: this.gl.getUniformLocation(this.shaderProgram, 'uControlPoints'),
+                },
+            };
+        });
 
-        this.buffers = this.initBuffers(this.gl);
+
+        this.buffers = this.initBuffers(this.gl, this.testCurve);
     }
 
     resize(canvas) {
@@ -138,15 +114,12 @@ class CurveEditor {
         const shader = gl.createShader(type);
 
         // Send the source to the shader object
-
         gl.shaderSource(shader, source);
 
         // Compile the shader program
-
         gl.compileShader(shader);
 
         // See if it compiled successfully
-
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
             alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
             gl.deleteShader(shader);
@@ -156,262 +129,41 @@ class CurveEditor {
         return shader;
     }
 
-    initBuffers(gl) {
-        const currentPositionBuffer = gl.createBuffer();
-        const nextPositionBuffer = gl.createBuffer();
+    initBuffers(gl, curve) {
+        const tBuffer = gl.createBuffer();
         const directionBuffer = gl.createBuffer();
-        const colorBuffer = gl.createBuffer();
+        
+        let t = curve.getTValues();
 
-
-        // Now create an array of positions for the cube.
-        const currentPositions = [
-            // Front face
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-
-            // Right face
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-        ];
-
-        const nextPositions = [
-            // Front face
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-
-            // Right face
-            1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, -1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, -1.0,
-        ];
-
-        const directions = [
-            // Front face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-
-            // Back face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-
-            // Top face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-
-            // Bottom face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-
-            // Right face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-
-            // Left face
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-            -1.0,
-            1.0,
-        ];
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, currentPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(currentPositions), gl.STATIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, nextPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(nextPositions), gl.STATIC_DRAW);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, directionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(directions), gl.STATIC_DRAW);
-
-        // Now set up the colors for the faces. We'll use solid colors
-        // for each face.
-
-        const faceColors = [
-            [1.0, 1.0, 1.0, 1.0],    // Front face: white
-            [1.0, 0.0, 0.0, 1.0],    // Back face: red
-            [0.0, 1.0, 0.0, 1.0],    // Top face: green
-            [0.0, 0.0, 1.0, 1.0],    // Bottom face: blue
-            [1.0, 1.0, 0.0, 1.0],    // Right face: yellow
-            [1.0, 0.0, 1.0, 1.0],    // Left face: purple
-        ];
-
-        // Convert the array of colors into a table for all the vertices.
-
-        var colors = [];
-
-        for (var j = 0; j < faceColors.length; ++j) {
-            const c = faceColors[j];
-
-            // Repeat each color four times for the four vertices of the face
-            colors = colors.concat(c, c, c, c);
+        /* Double each t, adding a direction */
+        let direction = [];
+        let doubleTs = [];
+        for (var i = 0; i < t.length; ++i) {
+            direction.push(-1, 1)
+            doubleTs.push(t[i], t[i])
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, directionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(direction), gl.STATIC_DRAW);
 
-        // // Build the element array buffer; this specifies the indices
-        // // into the vertex arrays for each face's vertices.
-
-        // const indexBuffer = gl.createBuffer();
-        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-
-        // // This array defines each face as two triangles, using the
-        // // indices into the vertex array to specify each triangle's
-        // // position.
-
-        // const indices = [
-        //   0,  1,  2,      0,  2,  3,    // front
-        //   4,  5,  6,      4,  6,  7,    // back
-        //   8,  9,  10,     8,  10, 11,   // top
-        //   12, 13, 14,     12, 14, 15,   // bottom
-        //   16, 17, 18,     16, 18, 19,   // right
-        //   20, 21, 22,     20, 22, 23,   // left
-        // ];
-
-        // Now send the element array to GL
-
-        // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-        // new Uint16Array(indices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, tBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(doubleTs), gl.STATIC_DRAW);
 
         return {
-            currentPosition: currentPositionBuffer,
-            nextPosition: nextPositionBuffer,
             direction: directionBuffer,
-            color: colorBuffer
+            t: tBuffer,
         };
     }
 
     // Draw the scene.
     drawScene(self, gl, programInfo, buffers, deltaTime) {
+        if (!self.shaderProgram) return;
         gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
         gl.enable(gl.DEPTH_TEST);           // Enable depth testing
         gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 
         // Clear the canvas before we start drawing on it.
-
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // Create a perspective matrix, a special matrix that is
@@ -449,50 +201,32 @@ class CurveEditor {
             modelViewMatrix,  // matrix to rotate
             self.cubeRotation,     // amount to rotate in radians
             [0, 0, 1]);       // axis to rotate around (Z)
-        mat4.rotate(modelViewMatrix,  // destination matrix
-            modelViewMatrix,  // matrix to rotate
-            self.cubeRotation * .7,// amount to rotate in radians
-            [0, 1, 0]);       // axis to rotate around (X)
+        // mat4.rotate(modelViewMatrix,  // destination matrix
+        //     modelViewMatrix,  // matrix to rotate
+        //     self.cubeRotation * .7,// amount to rotate in radians
+        //     [0, 1, 0]);       // axis to rotate around (X)
 
-        // Current position
+
+        // t values
         {
-            const numComponents = 3;
+            const numComponents = 1;
             const type = gl.FLOAT;
             const normalize = false;
             const stride = 0;
             const offset = 0;
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.currentPosition);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.t);
             gl.vertexAttribPointer(
-                programInfo.attribLocations.currentPosition,
+                programInfo.attribLocations.t,
                 numComponents,
                 type,
                 normalize,
                 stride,
                 offset);
             gl.enableVertexAttribArray(
-                programInfo.attribLocations.currentPosition);
+                programInfo.attribLocations.t);
         }
 
-        // Next position
-        {
-            const numComponents = 3;
-            const type = gl.FLOAT;
-            const normalize = false;
-            const stride = 0;
-            const offset = 0;
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.nextPosition);
-            gl.vertexAttribPointer(
-                programInfo.attribLocations.nextPosition,
-                numComponents,
-                type,
-                normalize,
-                stride,
-                offset);
-            gl.enableVertexAttribArray(
-                programInfo.attribLocations.nextPosition);
-        }
-
-        // Direction
+        // direction
         {
             const numComponents = 1;
             const type = gl.FLOAT;
@@ -511,59 +245,65 @@ class CurveEditor {
                 programInfo.attribLocations.direction);
         }
 
-        // Colors
-        {
-            const numComponents = 4;
-            const type = gl.FLOAT;
-            const normalize = false;
-            const stride = 0;
-            const offset = 0;
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-            gl.vertexAttribPointer(
-                programInfo.attribLocations.vertexColor,
-                numComponents,
-                type,
-                normalize,
-                stride,
-                offset);
-            gl.enableVertexAttribArray(
-                programInfo.attribLocations.vertexColor);
-        }
-
-        // Tell WebGL which indices to use to index the vertices
-        //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
+        
         // Tell WebGL to use our program when drawing
-
         gl.useProgram(programInfo.program);
 
         // Set the shader uniforms
-
         gl.uniformMatrix4fv(
-            programInfo.uniformLocations.projectionMatrix,
+            programInfo.uniformLocations.projection,
             false,
             projectionMatrix);
-        gl.uniformMatrix4fv(
-            programInfo.uniformLocations.modelViewMatrix,
+
+            gl.uniformMatrix4fv(
+            programInfo.uniformLocations.modelView,
             false,
             modelViewMatrix);
 
         gl.uniform1f(
             programInfo.uniformLocations.thickness,
-            1.0);
+            this.testCurve.thickness);
 
         gl.uniform1f(
             programInfo.uniformLocations.aspect,
             aspect);
+        
+        gl.uniform1i(
+            programInfo.uniformLocations.miter,
+            0);
+
+        gl.uniform1i(
+            programInfo.uniformLocations.numControlPoints,
+            self.testCurve.controlPoints.length / 3);
+        
+        gl.uniform3fv(
+            programInfo.uniformLocations.controlPoints,
+            new Float32Array(self.testCurve.controlPoints));
+
+            self.testCurve.controlPoints[0] = 3 * Math.cos(self.then);
+            self.testCurve.controlPoints[1] = 3 * Math.sin(self.then);
+
+            self.testCurve.controlPoints[3] = 2 * Math.cos(self.then * .5);
+            self.testCurve.controlPoints[4] = 2 * Math.sin(self.then * .5);
+
+            self.testCurve.controlPoints[6] = Math.cos(self.then * .25);
+            self.testCurve.controlPoints[7] = Math.sin(self.then * .25);
+
+            self.testCurve.controlPoints[9] = -1 * Math.cos(self.then * .5);
+            self.testCurve.controlPoints[10] = -2 * Math.sin(self.then * .5);
+
+            self.testCurve.controlPoints[12] = -3 * Math.cos(self.then);
+            self.testCurve.controlPoints[13] = -2 * Math.sin(self.then * .7);
+
+
 
         {
-            const vertexCount = 16;
+            const vertexCount = self.testCurve.numSamples * 2;
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
         }
 
         // Update the rotation for the next draw
-
-        self.cubeRotation += deltaTime * .1;
+        // self.cubeRotation += deltaTime * .5;
     }
 
 
