@@ -35,12 +35,14 @@ class CurveEditor {
         });
 
         hammer.on('panstart', (e) => {
-            console.log(e)
+            // console.log(e)
             /* Check if we're moving a point */
             this.handleToMove = -1;
             this.selectedCurve = -1;
             for (var j = 0; j < this.curves.length; ++j ) {
-                var ctl_idx = this.curves[j].getClickedHandle(e.center.x - this.position.x, (e.center.y - this.position.y))
+                var ctl_idx = this.curves[j].getClickedHandle(
+                    (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
+                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y)
                 if (ctl_idx != -1) {
                     console.log("Handle " + ctl_idx + " was pressed");
                     this.handleToMove = ctl_idx;
@@ -59,7 +61,9 @@ class CurveEditor {
                 this.position.x = this.originalPosition.x + e.deltaX;
                 this.position.y = this.originalPosition.y + e.deltaY;
             } else {
-                this.curves[this.selectedCurve].moveHandle(this.handleToMove, e.changedPointers[0].clientX - this.position.x, (e.changedPointers[0].clientY - this.position.y));
+                this.curves[this.selectedCurve].moveHandle(this.handleToMove, 
+                    (e.changedPointers[0].clientX - this.gl.canvas.clientWidth/2.0) - this.position.x, 
+                    (e.changedPointers[0].clientY - this.gl.canvas.clientHeight/2.0) - this.position.y);
             }
         });
 
@@ -179,7 +183,7 @@ class CurveEditor {
         //     zNear,
         //     zFar);
 
-        mat4.ortho(projectionMatrix, 0.0, gl.canvas.clientWidth, gl.canvas.clientHeight, 0.0, -1.0, 1.0)
+        mat4.ortho(projectionMatrix, -gl.canvas.clientWidth, gl.canvas.clientWidth, gl.canvas.clientHeight, -gl.canvas.clientHeight, -1.0, 1.0)
         let zoom = vec3.create();
         vec3.set(zoom, this.zoom, this.zoom, 1.0);
         mat4.scale(projectionMatrix, projectionMatrix, zoom);

@@ -130,7 +130,7 @@ class Curve {
         this.showControlPolygon = true;
         this.showControlPoints = true;
         this.numSamples = 200;
-        this.thickness = .05;
+        this.thickness = 20.0;
         this.controlPoints = [
             0.0, 0.0, 0.0,
             0.5, -0.5, 0.0,
@@ -140,7 +140,7 @@ class Curve {
         ];
 
         this.handleRadius = 25;
-        this.handleThickness = .025;
+        this.handleThickness = 10.;
         this.handleSamples = 20;
 
         this.updateBuffers();
@@ -623,7 +623,7 @@ class Curve {
 
         gl.uniform1f(
             Curve.LineProgramInfo.uniformLocations.thickness,
-            .01);
+            this.handleThickness);
 
         gl.uniform1f(
             Curve.LineProgramInfo.uniformLocations.aspect,
@@ -641,20 +641,6 @@ class Curve {
 
     draw(projection, modelView, aspect, time) {
         var gl = Curve.gl;
-        // this.controlPoints[0] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;;//this.position.x;
-        // this.controlPoints[1] =gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;//this.position.y;
-
-        // this.controlPoints[3] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;
-        // this.controlPoints[4] = gl.canvas.clientHeight * Math.sin(-time * .1) * .5 + gl.canvas.clientHeight * .5;
-
-        // this.controlPoints[6] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;
-        // this.controlPoints[7] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;
-
-        // this.controlPoints[9] = gl.canvas.clientWidth * Math.cos(time * 1.0) * .5 + gl.canvas.clientWidth * .5;
-        // this.controlPoints[10] = gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;
-
-        // this.controlPoints[12] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;//this.position.x;//-300 * Math.cos(time);
-        // this.controlPoints[13] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;//this.position.y;//-200 * Math.sin(time * .7);
 
         this.updateBuffers()
         if (this.showCurve) {
