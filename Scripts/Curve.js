@@ -298,6 +298,22 @@ class Curve {
         return ts;
     }
 
+    getClickedHandle(x, y) {
+        for (var i = 0; i < this.controlPoints.length/3; ++i) {
+            var deltaX = x - this.controlPoints[3 * i + 0];
+            var deltaY = y - this.controlPoints[3 * i + 1];
+            var distSqrd = deltaX * deltaX + deltaY + deltaY;
+            if (distSqrd < (this.handleRadius * this.handleRadius)) return i;
+        }
+        return -1;
+    }
+
+    moveHandle(handleIdx, x, y) {
+        this.controlPoints[3 * handleIdx + 0] = x;
+        this.controlPoints[3 * handleIdx + 1] = y;
+        console.log("Moving handle " + handleIdx + " to " + x + " " + y)
+    }
+
     bernstein(n, k, t) {
         let result = 1.0;
         for (let i = 1.0; i <= 128; i++) {
@@ -306,22 +322,6 @@ class Curve {
         }
         result *= Math.pow(t, k) * Math.pow(1.0 - t, n - k);
         return result;
-    }
-
-    draw(projection, modelView, aspect, time) {
-        this.updateBuffers()
-        if (this.drawCurve) {
-            this.drawCurve(projection, modelView, aspect, time);
-        }
-
-        if (this.drawControlPoints) {
-            this.drawControlPoints(projection, modelView, aspect, time);
-        }
-
-        if (this.drawControlPolygon) {
-            this.drawControlPolygon(projection, modelView, aspect, time);
-        }
-
     }
 
     drawCurve(projection, modelView, aspect, time) {
@@ -400,21 +400,6 @@ class Curve {
         gl.uniform3fv(
             Curve.BezierProgramInfo.uniformLocations.controlPoints,
             new Float32Array(this.controlPoints));
-
-        this.controlPoints[0] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;;//this.position.x;
-        this.controlPoints[1] =gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;//this.position.y;
-
-        this.controlPoints[3] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;
-        this.controlPoints[4] = gl.canvas.clientHeight * Math.sin(-time * .1) * .5 + gl.canvas.clientHeight * .5;
-
-        this.controlPoints[6] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;
-        this.controlPoints[7] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;
-
-        this.controlPoints[9] = gl.canvas.clientWidth * Math.cos(time * 1.0) * .5 + gl.canvas.clientWidth * .5;
-        this.controlPoints[10] = gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;
-
-        this.controlPoints[12] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;//this.position.x;//-300 * Math.cos(time);
-        this.controlPoints[13] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;//this.position.y;//-200 * Math.sin(time * .7);
         {
             const vertexCount = this.numSamples * 2;
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
@@ -651,6 +636,38 @@ class Curve {
             const vertexCount = (this.controlPoints.length / 3) * 2;
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
         }
+    }
+
+    draw(projection, modelView, aspect, time) {
+        var gl = Curve.gl;
+        // this.controlPoints[0] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;;//this.position.x;
+        // this.controlPoints[1] =gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;//this.position.y;
+
+        // this.controlPoints[3] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;
+        // this.controlPoints[4] = gl.canvas.clientHeight * Math.sin(-time * .1) * .5 + gl.canvas.clientHeight * .5;
+
+        // this.controlPoints[6] = gl.canvas.clientWidth * Math.cos(-time * .25) * .5 + gl.canvas.clientWidth * .5;
+        // this.controlPoints[7] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;
+
+        // this.controlPoints[9] = gl.canvas.clientWidth * Math.cos(time * 1.0) * .5 + gl.canvas.clientWidth * .5;
+        // this.controlPoints[10] = gl.canvas.clientHeight * Math.sin(time * .5) * .5 + gl.canvas.clientHeight * .5;
+
+        // this.controlPoints[12] = gl.canvas.clientWidth * Math.cos(-time * .1) * .5 + gl.canvas.clientWidth * .5;//this.position.x;//-300 * Math.cos(time);
+        // this.controlPoints[13] = gl.canvas.clientHeight * Math.sin(-time * .25) * .5 + gl.canvas.clientHeight * .5;//this.position.y;//-200 * Math.sin(time * .7);
+
+        this.updateBuffers()
+        if (this.showCurve) {
+            this.drawCurve(projection, modelView, aspect, time);
+        }
+
+        if (this.showControlPoints) {
+            this.drawControlPoints(projection, modelView, aspect, time);
+        }
+
+        if (this.showControlPolygon) {
+            this.drawControlPolygon(projection, modelView, aspect, time);
+        }
+
     }
 }
 

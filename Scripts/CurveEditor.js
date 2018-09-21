@@ -30,17 +30,46 @@ class CurveEditor {
             enable: true
         });
 
+        hammer.get('pan').set({
+            threshold: 0
+        });
+
         hammer.on('panstart', (e) => {
-            this.originalPosition = {x: this.position.x, y: this.position.y};
+            console.log(e)
+            /* Check if we're moving a point */
+            this.handleToMove = -1;
+            this.selectedCurve = -1;
+            for (var j = 0; j < this.curves.length; ++j ) {
+                var ctl_idx = this.curves[j].getClickedHandle(e.center.x - this.position.x, (e.center.y - this.position.y))
+                if (ctl_idx != -1) {
+                    console.log("Handle " + ctl_idx + " was pressed");
+                    this.handleToMove = ctl_idx;
+                    this.selectedCurve = j;
+                    break;
+                }
+            }
+            
+            if (this.handleToMove == -1) {
+                this.originalPosition = {x: this.position.x, y: this.position.y};
+            }
         });
 
         hammer.on('pan', (e) => {
-            this.position.x = this.originalPosition.x + e.deltaX;
-            this.position.y = this.originalPosition.y + e.deltaY;
+            if (this.handleToMove == -1) {
+                this.position.x = this.originalPosition.x + e.deltaX;
+                this.position.y = this.originalPosition.y + e.deltaY;
+            } else {
+                this.curves[this.selectedCurve].moveHandle(this.handleToMove, e.changedPointers[0].clientX - this.position.x, (e.changedPointers[0].clientY - this.position.y));
+            }
         });
 
         hammer.on('panend', (e) => {
-            this.originalPosition = this.position;
+            if (this.handleToMove == -1) {
+                this.originalPosition = this.position;
+            } else {
+                this.handleToMove = -1;
+                this.selectedCurve = -1;
+            }
         });
 
         // hammer.on('pinch', function (e) {
@@ -77,11 +106,35 @@ class CurveEditor {
         //     zoomAround(2, c.x, c.y);
         // });
 
+        
+        
         Curve.Initialize(this.gl);
         this.curves = [];
         for (let i = 0; i < 3; ++i) {
             this.curves.push(new Curve());
         }
+        
+        document.onkeyup = (e) => {
+            console.log("The key code is: " + e.keyCode);
+            if (e.keyCode == 67) {
+                for (var j = 0; j < this.curves.length; ++j ) {
+                    this.curves[j].showCurve = !this.curves[j].showCurve;
+                }
+            }
+
+            if (e.keyCode == 76) {
+                for (var j = 0; j < this.curves.length; ++j ) {
+                    this.curves[j].showControlPolygon = !this.curves[j].showControlPolygon;
+                }
+            }
+
+            if (e.keyCode == 80) {
+                for (var j = 0; j < this.curves.length; ++j ) {
+                    this.curves[j].showControlPoints = !this.curves[j].showControlPoints;
+                }
+            }
+            
+        };
     }
 
     resize() {
@@ -136,7 +189,7 @@ class CurveEditor {
 
         /* Now draw our curves */
         for (let i = 0; i < this.curves.length; ++i) {
-            this.curves[i].draw(projectionMatrix, modelViewMatrix, aspect, this.then * .2 * (i+1));
+            this.curves[i].draw(projectionMatrix, modelViewMatrix, aspect, 1000); //this.then * .2 * (i+1)
         }
     }
 }
