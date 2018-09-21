@@ -302,8 +302,9 @@ class Curve {
         for (var i = 0; i < this.controlPoints.length/3; ++i) {
             var deltaX = x - this.controlPoints[3 * i + 0];
             var deltaY = y - this.controlPoints[3 * i + 1];
-            var distSqrd = deltaX * deltaX + deltaY + deltaY;
-            if (distSqrd < (this.handleRadius * this.handleRadius)) return i;
+            var distSqrd = deltaX * deltaX + deltaY * deltaY;
+            if (distSqrd < (this.handleRadius * this.handleRadius)) 
+                return i;
         }
         return -1;
     }
