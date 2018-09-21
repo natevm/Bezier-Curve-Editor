@@ -1,4 +1,5 @@
 import {CurveEditor} from "./CurveEditor.js"
+import {Curve} from "./Curve.js"
 
 /* Is this required? */ 
 let curveEditor;
@@ -12,3 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
     curveEditor = new CurveEditor();
     requestAnimationFrame(render);
 });
+
+window.onresize = function() {
+    curveEditor.resize()
+};
