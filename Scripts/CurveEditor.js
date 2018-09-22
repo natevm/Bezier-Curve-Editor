@@ -2,6 +2,7 @@ import { Curve } from "./Curve.js"
 
 class CurveEditor {
     constructor() {
+        this.pointJustAdded = false;
         this.selectedCurve = 0;
         this.selectedHandle = -1;
         this.showCurves = true;
@@ -66,6 +67,7 @@ class CurveEditor {
                 this.position.x = this.originalPosition.x + e.deltaX;
                 this.position.y = this.originalPosition.y + e.deltaY;
             } else {
+                this.pointJustAdded = false;
                 this.curves[this.selectedCurve].moveHandle(this.selectedHandle, 
                     (e.changedPointers[0].clientX - this.gl.canvas.clientWidth/2.0) - this.position.x, 
                     (e.changedPointers[0].clientY - this.gl.canvas.clientHeight/2.0) - this.position.y);
@@ -80,14 +82,29 @@ class CurveEditor {
             }
         });
 
-        hammer.on('pressup', (e) => {
-            console.log("PRESS RECOGNIZED");
+        hammer.on('press', (e) => {
             if (this.selectedCurve != -1) {
-                console.log("Adding new point");
-                this.curves[this.selectedCurve].addHandle(
+                if (this.curves[this.selectedCurve].getClickedHandle(
                     (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
-            }
+                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y) == -1)
+                    {
+                        if (this.pointJustAdded == false ){
+                            this.curves[this.selectedCurve].addHandle(
+                                (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
+                                (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
+                            this.selectedHandle = (this.curves[this.selectedCurve].controlPoints.length / 3) - 1;
+                        } else {
+                            this.curves[this.selectedCurve].moveHandle(this.selectedHandle,
+                                (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
+                                (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
+                        }                
+                        this.pointJustAdded = true;
+                    }
+                }
+        });
+
+        hammer.on('pressup', (e) => {
+            this.pointJustAdded = false;
         });
 
         // hammer.on('pinch', function (e) {
@@ -128,31 +145,22 @@ class CurveEditor {
         
         Curve.Initialize(this.gl);
         this.curves = [];
-        for (let i = 0; i < 1; ++i) {
-            this.curves.push(new Curve());
-        }
+        // for (let i = 0; i < 1; ++i) {
+        //     this.curves.push(new Curve());
+        // }
         
         document.onkeyup = (e) => {
             console.log("The key code is: " + e.keyCode);
             if (e.keyCode == 67) {
-                this.showCurves = !this.showCurves;
-                for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showCurve = this.showCurves;
-                }
+                this.hideCurves();
             }
 
             if (e.keyCode == 76) {
-                this.showControlPolygons = !this.showControlPolygons;
-                for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showControlPolygon = this.showControlPolygons;
-                }
+                this.hideControlPolygons();
             }
 
             if (e.keyCode == 80) {
-                this.showControlPoints = !this.showControlPoints;
-                for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showControlPoints = this.showControlPoints;
-                }
+                this.hideControlHandles();
             }
 
             if (e.keyCode == 65) {
@@ -245,6 +253,41 @@ class CurveEditor {
 
     newCurve() {
         this.curves.push(new Curve(-this.position.x, -this.position.y))
+    }
+
+    deleteLastHandle() {
+        if (this.selectedCurve != -1 && this.selectedHandle != -1) {
+            if (this.curves[this.selectedCurve].controlPoints.length <= 3) {
+                this.curves.splice(this.selectedCurve, 1);
+                this.selectedCurve = -1;
+                this.selectedHandle = -1;
+            } else {
+                console.log("Deleting point");
+                this.curves[this.selectedCurve].removeHandle(this.selectedHandle);
+                this.selectedHandle = -1;
+            }
+        }
+    }
+
+    hideControlPolygons() {
+        this.showControlPolygons = !this.showControlPolygons;
+        for (var j = 0; j < this.curves.length; ++j ) {
+            this.curves[j].showControlPolygon = this.showControlPolygons;
+        }
+    }
+    
+    hideControlHandles() {
+        this.showControlHandles = !this.showControlHandles;
+        for (var j = 0; j < this.curves.length; ++j ) {
+            this.curves[j].showControlPoints = this.showControlHandles;
+        }
+    }
+    
+    hideCurves() {
+        this.showCurves = !this.showCurves;
+        for (var j = 0; j < this.curves.length; ++j ) {
+            this.curves[j].showCurve = this.showCurves;
+        }
     }
 }
 

@@ -132,15 +132,13 @@ class Curve {
         this.numSamples = 200;
         this.thickness = 20.0;
         this.controlPoints = [
-            -300.0 + x, y - 200, 0.0,
-            -100 + x, 200.0 + y, 0.0,
-            100.0 + x, y - 200, 0.0,
-            300.0 + x, 200.0 + y, 0.0,
+            -300.0 + x, y, 0.0,
+            300.0 + x, y, 0.0,
         ];
 
-        this.handleRadius = 25;
+        this.handleRadius = 40;
         this.handleThickness = 10.;
-        this.handleSamples = 20;
+        this.handleSamples = 30;
 
         this.updateBuffers();
     }
@@ -355,63 +353,28 @@ class Curve {
             }
         }
 
-        this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
 
-        // if (closest == 0) {
-        //     this.controlPoints.unshift(x, y, 0.0);
-        // } else if (closest == ((this.controlPoints.length / 3) - 1)) {
-        //     this.controlPoints.push(x, y, 0.0);
-        // } 
-        // else {
-        //     var deltaX1 = this.controlPoints[(closest-1) * 3 + 0] - this.controlPoints[(closest) * 3 + 0];
-        //     var deltaY1 = this.controlPoints[(closest-1) * 3 + 1] - this.controlPoints[(closest) * 3 + 1];
-
-        //     var deltaX2 = this.controlPoints[(closest+1) * 3 + 0] - this.controlPoints[(closest) * 3 + 0];
-        //     var deltaY2 = this.controlPoints[(closest+1) * 3 + 1] - this.controlPoints[(closest) * 3 + 1];
-
-        //     var deltaX3 = x - this.controlPoints[(closest) * 3 + 0];
-        //     var deltaY3 = y - this.controlPoints[(closest) * 3 + 1];
-
-            
-        //     var toFirst = vec2.create()
-        //     vec2.set(toFirst, deltaX1, deltaY1);
-        //     var toSecond = vec2.create()
-        //     vec2.set(toSecond, deltaX2, deltaY2);
-        //     var toNew = vec2.create()
-        //     vec2.set(toNew, deltaX3, deltaY3);
-
-        //     vec2.normalize(toFirst, toFirst);
-        //     vec2.normalize(toSecond, toSecond);
-        //     vec2.normalize(toNew, toNew);
-            
-        //     var distToFirstLine = vec2.create();
-        //     var distToSecondLine = vec2.create();
-
-        //     vec2.subtract( distToFirstLine, toNew, toFirst);
-        //     vec2.subtract( distToSecondLine, toNew, toSecond);
-
-        //     var dist1 = vec2.squaredLength(distToFirstLine)
-        //     var dist2 = vec2.squaredLength(distToSecondLine)
-            
-        //     var angle1 = Math.sign(vec2.dot(toNew, toSecond));
-        //     var angle2 = Math.sign(vec2.dot(toNew, toFirst));
-
-        //     if ((angle1 == -1 && angle2 == -1) || (angle1 == 1 && angle2 == 1)) {
-        //         if (dist1 < dist2) {
-        //             this.controlPoints.splice((closest) * 3, 0, x, y, 0.0);
-        //         } else {
-        //             this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
-        //         }
-        //     } else if (angle1 == -1) {
-        //         this.controlPoints.splice((closest) * 3, 0, x, y, 0.0);
-        //     } else {
-        //         this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
-        //     }
-        //     //var dist1 = deltaX1 * deltaX1 + deltaY1 * deltaY1;
-        //     //var dist2 = deltaX2 * deltaX2 + deltaY2 * deltaY2;
-        // }
-
-        // this.controlPoints.push(x, y, 0.0);
+        if (closest == 0) {
+            var end = vec2.create();
+            vec2.set(end, this.controlPoints[0], this.controlPoints[1] )
+            var distanceToEnd = vec2.distance(p, end);
+            if (distanceToEnd <= closestDistance) {
+                this.controlPoints.unshift(x, y, 0.0);
+            } else {
+                this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+            }
+        } else if (closest == ((this.controlPoints.length / 3) - 2)) {
+            var end = vec2.create();
+            vec2.set(end, this.controlPoints[this.controlPoints.length - 3], this.controlPoints[this.controlPoints.length - 2] )
+            var distanceToEnd = vec2.distance(p, end);
+            if (distanceToEnd <= closestDistance) {
+                this.controlPoints.push(x, y, 0.0);
+            } else {
+                this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+            }
+        } else {
+            this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+        }
     }
 
     bernstein(n, k, t) {
@@ -742,18 +705,17 @@ class Curve {
         var gl = Curve.gl;
 
         this.updateBuffers()
-        if (this.showCurve) {
-            this.drawCurve(projection, modelView, aspect, time);
-        }
-
-        if (this.showControlPoints) {
-            this.drawControlPoints(projection, modelView, aspect, time);
-        }
-
         if (this.showControlPolygon) {
             this.drawControlPolygon(projection, modelView, aspect, time);
         }
 
+        if (this.showCurve) {
+            this.drawCurve(projection, modelView, aspect, time);
+        }
+        
+        if (this.showControlPoints) {
+            this.drawControlPoints(projection, modelView, aspect, time);
+        }
     }
 }
 
