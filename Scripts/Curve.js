@@ -125,18 +125,17 @@ class Curve {
         return shader;
     }
 
-    constructor() {
+    constructor(x = 0, y = 0) {
         this.showCurve = true;
         this.showControlPolygon = true;
         this.showControlPoints = true;
         this.numSamples = 200;
         this.thickness = 20.0;
         this.controlPoints = [
-            0.0, 0.0, 0.0,
-            0.5, -0.5, 0.0,
-            1.0, 0.0, 0.0,
-            1.5, 0.5, 0.0,
-            2.0, 0.0, 0.0,
+            -300.0 + x, y - 200, 0.0,
+            -100 + x, 200.0 + y, 0.0,
+            100.0 + x, y - 200, 0.0,
+            300.0 + x, 200.0 + y, 0.0,
         ];
 
         this.handleRadius = 25;
@@ -313,6 +312,14 @@ class Curve {
         this.controlPoints[3 * handleIdx + 0] = x;
         this.controlPoints[3 * handleIdx + 1] = y;
         console.log("Moving handle " + handleIdx + " to " + x + " " + y)
+    }
+
+    removeHandle(handleIdx) {
+        this.controlPoints.splice(handleIdx * 3, 3);
+    }
+
+    addHandle(x, y) {
+        this.controlPoints.push(x, y, 0.0);
     }
 
     bernstein(n, k, t) {

@@ -2,6 +2,9 @@ import { Curve } from "./Curve.js"
 
 class CurveEditor {
     constructor() {
+        this.showCurves = true;
+        this.showControlPolygons = true;
+        this.showControlHandles = true;
         this.then = 0.0;
         this.canvas = document.querySelector('#glcanvas');
         this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
@@ -37,42 +40,41 @@ class CurveEditor {
         hammer.on('panstart', (e) => {
             // console.log(e)
             /* Check if we're moving a point */
-            this.handleToMove = -1;
-            this.selectedCurve = -1;
+            this.selectedHandle = -1;
+            // this.selectedCurve = -1;
             for (var j = 0; j < this.curves.length; ++j ) {
                 var ctl_idx = this.curves[j].getClickedHandle(
                     (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
                     (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y)
                 if (ctl_idx != -1) {
                     console.log("Handle " + ctl_idx + " was pressed");
-                    this.handleToMove = ctl_idx;
+                    this.selectedHandle = ctl_idx;
                     this.selectedCurve = j;
                     break;
                 }
             }
             
-            if (this.handleToMove == -1) {
+            if (this.selectedHandle == -1) {
                 this.originalPosition = {x: this.position.x, y: this.position.y};
             }
         });
 
         hammer.on('pan', (e) => {
-            if (this.handleToMove == -1) {
+            if (this.selectedHandle == -1) {
                 this.position.x = this.originalPosition.x + e.deltaX;
                 this.position.y = this.originalPosition.y + e.deltaY;
             } else {
-                this.curves[this.selectedCurve].moveHandle(this.handleToMove, 
+                this.curves[this.selectedCurve].moveHandle(this.selectedHandle, 
                     (e.changedPointers[0].clientX - this.gl.canvas.clientWidth/2.0) - this.position.x, 
                     (e.changedPointers[0].clientY - this.gl.canvas.clientHeight/2.0) - this.position.y);
             }
         });
 
         hammer.on('panend', (e) => {
-            if (this.handleToMove == -1) {
+            if (this.selectedHandle == -1) {
                 this.originalPosition = this.position;
             } else {
-                this.handleToMove = -1;
-                this.selectedCurve = -1;
+                // this.selectedHandle = -1;
             }
         });
 
@@ -114,28 +116,56 @@ class CurveEditor {
         
         Curve.Initialize(this.gl);
         this.curves = [];
-        for (let i = 0; i < 3; ++i) {
+        for (let i = 0; i < 1; ++i) {
             this.curves.push(new Curve());
         }
         
         document.onkeyup = (e) => {
             console.log("The key code is: " + e.keyCode);
             if (e.keyCode == 67) {
+                this.showCurves = !this.showCurves;
                 for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showCurve = !this.curves[j].showCurve;
+                    this.curves[j].showCurve = this.showCurves;
                 }
             }
 
             if (e.keyCode == 76) {
+                this.showControlPolygons = !this.showControlPolygons;
                 for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showControlPolygon = !this.curves[j].showControlPolygon;
+                    this.curves[j].showControlPolygon = this.showControlPolygons;
                 }
             }
 
             if (e.keyCode == 80) {
+                this.showControlPoints = !this.showControlPoints;
                 for (var j = 0; j < this.curves.length; ++j ) {
-                    this.curves[j].showControlPoints = !this.curves[j].showControlPoints;
+                    this.curves[j].showControlPoints = this.showControlPoints;
                 }
+            }
+
+            if (e.keyCode == 65) {
+                if (this.selectedCurve != -1) {
+                    console.log("Adding new point");
+                    this.curves[this.selectedCurve].addHandle(-this.position.x, -this.position.y);
+                }
+            }
+
+            if (e.keyCode == 46) {
+                if (this.selectedCurve != -1 && this.selectedHandle != -1) {
+                    if (this.curves[this.selectedCurve].controlPoints.length <= 3) {
+                        this.curves.splice(this.selectedCurve, 1);
+                        this.selectedCurve = -1;
+                        this.selectedHandle = -1;
+                    } else {
+                        console.log("Deleting point");
+                        this.curves[this.selectedCurve].removeHandle(this.selectedHandle);
+                        this.selectedHandle = -1;
+                    }
+                }
+            }
+
+            if (e.keyCode == 78) {
+                this.curves.push(new Curve(-this.position.x, -this.position.y))
             }
             
         };

@@ -1,3 +1,4 @@
+precision lowp float;
 attribute float t;
 attribute float direction; 
 // attribute vec3 position;
@@ -15,7 +16,7 @@ uniform int uNumControlPoints;
 uniform vec3 uControlPoints[64];
 
 varying lowp vec4 vColor;
-
+varying lowp vec3 vOffset;
 
 #define MAX_K 128.0
 #define MAX_K_i 128
@@ -101,5 +102,5 @@ void main(void) {
 
     normal = normalize(normal);
     vColor = vec4(abs(normal.x), abs(normal.y), abs(.5 - normal.x * normal.y), 1.0);
-
+    vOffset = offset;
 }

@@ -1,3 +1,4 @@
+precision lowp float;
 attribute vec3 position;
 attribute float direction; 
 attribute vec3 next;
@@ -9,6 +10,9 @@ uniform float aspect;
 
 uniform float thickness;
 uniform int miter;
+
+varying lowp vec4 vColor;
+varying lowp vec3 vOffset;
 
 void main() {
   vec2 aspectVec = vec2(aspect, 1.0);
@@ -47,4 +51,7 @@ void main() {
   vec3 offset = normal * orientation;
   gl_Position = projViewModel * vec4((position + offset), 1.0);
   gl_PointSize = 1.0;
+
+  vOffset = offset;
+  vColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
