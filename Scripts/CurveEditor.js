@@ -2,6 +2,8 @@ import { Curve } from "./Curve.js"
 
 class CurveEditor {
     constructor() {
+        this.selectedCurve = 0;
+        this.selectedHandle = -1;
         this.showCurves = true;
         this.showControlPolygons = true;
         this.showControlHandles = true;
@@ -75,6 +77,16 @@ class CurveEditor {
                 this.originalPosition = this.position;
             } else {
                 // this.selectedHandle = -1;
+            }
+        });
+
+        hammer.on('pressup', (e) => {
+            console.log("PRESS RECOGNIZED");
+            if (this.selectedCurve != -1) {
+                console.log("Adding new point");
+                this.curves[this.selectedCurve].addHandle(
+                    (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
+                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
             }
         });
 
@@ -167,7 +179,11 @@ class CurveEditor {
             if (e.keyCode == 78) {
                 this.curves.push(new Curve(-this.position.x, -this.position.y))
             }
-            
+
+            this.canvas.oncontextmenu=function(e){
+                e.preventDefault();
+                return false;
+            }
         };
     }
 
@@ -225,6 +241,10 @@ class CurveEditor {
         for (let i = 0; i < this.curves.length; ++i) {
             this.curves[i].draw(projectionMatrix, modelViewMatrix, aspect, 1000); //this.then * .2 * (i+1)
         }
+    }
+
+    newCurve() {
+        this.curves.push(new Curve(-this.position.x, -this.position.y))
     }
 }
 

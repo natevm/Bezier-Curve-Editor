@@ -318,8 +318,100 @@ class Curve {
         this.controlPoints.splice(handleIdx * 3, 3);
     }
 
+    sqr(x) { return x * x }
+    dist2(v, w) { return this.sqr(v[0] - w[0]) + this.sqr(v[1] - w[1]) }
+    distToSegmentSquared(p, v, w) {
+        var l2 = this.dist2(v, w);
+        if (l2 == 0) return this.dist2(p, v);
+        var t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return this.dist2(p, [ v[0] + t * (w[0] - v[0]),
+                           v[1] + t * (w[1] - v[1])] );
+    }
+    distToSegment(p, v, w) { return Math.sqrt(this.distToSegmentSquared(p, v, w)); }
+
     addHandle(x, y) {
-        this.controlPoints.push(x, y, 0.0);
+
+        var p = vec2.create()
+        vec2.set(p, x, y);
+
+
+        var closest = -1;
+        var closestDistance = Number.MAX_VALUE;
+        for (var i = 0; i < (this.controlPoints.length / 3 - 1); ++i) {
+            //var deltaX = x - this.controlPoints[i * 3 + 0];
+            //var deltaY = x - this.controlPoints[i * 3 + 1];
+            //var distance = deltaX * deltaX + deltaY * deltaY;
+            
+            var v = vec2.create()
+            var w = vec2.create()
+            vec2.set(v, this.controlPoints[i * 3 + 0], this.controlPoints[i * 3 + 1])
+            vec2.set(w, this.controlPoints[(i+1) * 3 + 0], this.controlPoints[(i+1) * 3 + 1])
+            var distance = this.distToSegment(p, v, w);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = i;
+            }
+        }
+
+        this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+
+        // if (closest == 0) {
+        //     this.controlPoints.unshift(x, y, 0.0);
+        // } else if (closest == ((this.controlPoints.length / 3) - 1)) {
+        //     this.controlPoints.push(x, y, 0.0);
+        // } 
+        // else {
+        //     var deltaX1 = this.controlPoints[(closest-1) * 3 + 0] - this.controlPoints[(closest) * 3 + 0];
+        //     var deltaY1 = this.controlPoints[(closest-1) * 3 + 1] - this.controlPoints[(closest) * 3 + 1];
+
+        //     var deltaX2 = this.controlPoints[(closest+1) * 3 + 0] - this.controlPoints[(closest) * 3 + 0];
+        //     var deltaY2 = this.controlPoints[(closest+1) * 3 + 1] - this.controlPoints[(closest) * 3 + 1];
+
+        //     var deltaX3 = x - this.controlPoints[(closest) * 3 + 0];
+        //     var deltaY3 = y - this.controlPoints[(closest) * 3 + 1];
+
+            
+        //     var toFirst = vec2.create()
+        //     vec2.set(toFirst, deltaX1, deltaY1);
+        //     var toSecond = vec2.create()
+        //     vec2.set(toSecond, deltaX2, deltaY2);
+        //     var toNew = vec2.create()
+        //     vec2.set(toNew, deltaX3, deltaY3);
+
+        //     vec2.normalize(toFirst, toFirst);
+        //     vec2.normalize(toSecond, toSecond);
+        //     vec2.normalize(toNew, toNew);
+            
+        //     var distToFirstLine = vec2.create();
+        //     var distToSecondLine = vec2.create();
+
+        //     vec2.subtract( distToFirstLine, toNew, toFirst);
+        //     vec2.subtract( distToSecondLine, toNew, toSecond);
+
+        //     var dist1 = vec2.squaredLength(distToFirstLine)
+        //     var dist2 = vec2.squaredLength(distToSecondLine)
+            
+        //     var angle1 = Math.sign(vec2.dot(toNew, toSecond));
+        //     var angle2 = Math.sign(vec2.dot(toNew, toFirst));
+
+        //     if ((angle1 == -1 && angle2 == -1) || (angle1 == 1 && angle2 == 1)) {
+        //         if (dist1 < dist2) {
+        //             this.controlPoints.splice((closest) * 3, 0, x, y, 0.0);
+        //         } else {
+        //             this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+        //         }
+        //     } else if (angle1 == -1) {
+        //         this.controlPoints.splice((closest) * 3, 0, x, y, 0.0);
+        //     } else {
+        //         this.controlPoints.splice((closest+1) * 3,0, x, y, 0.0);
+        //     }
+        //     //var dist1 = deltaX1 * deltaX1 + deltaY1 * deltaY1;
+        //     //var dist2 = deltaX2 * deltaX2 + deltaY2 * deltaY2;
+        // }
+
+        // this.controlPoints.push(x, y, 0.0);
     }
 
     bernstein(n, k, t) {
