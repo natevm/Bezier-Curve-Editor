@@ -11,23 +11,31 @@ class CurveEditor {
         this.then = 0.0;
         this.canvas = document.querySelector('#glcanvas');
         this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
-        
+        this.position = { x: 0, y: 0 };
+        this.zoom = 1.0;
+
         // If we don't have a GL context, give up now  
         if (!this.gl) {
             alert('Unable to initialize WebGL. Your browser or machine may not support it.');
             return;
         }
 
+        /* Handle canvas resizes */
         this.resize();
+        this.canvas.onresize = function () { this.resize(); }
 
-        this.canvas.onresize = function () {
-            console.log("RESIZING");
-            this.resize();
+        /* Initialize curve shaders, start off with a random curve */
+        Curve.Initialize(this.gl);
+        this.curves = [];
+        for (let i = 0; i < 1; ++i) {
+            this.curves.push(new Curve());
+            this.curves[i].controlPoints = []
+            for (let j = 0; j < 10; ++j) {
+                this.curves[i].addHandle((this.canvas.clientWidth / 4.0) * (2.0 * Math.random() - 1.0), (this.canvas.clientHeight / 4.0) * (2.0 * Math.random() - 1.0))
+            }
         }
 
-        this.position = { x: 0, y: 0 };
-        this.zoom = 1.0;
-        
+        /* Setup Hammer Events / */
         var hammer = new Hammer(this.canvas, {
             domEvents: true
         });
@@ -40,161 +48,43 @@ class CurveEditor {
             threshold: 0
         });
 
-        hammer.on('panstart', (e) => {
-            // console.log(e)
-            /* Check if we're moving a point */
-            this.selectedHandle = -1;
-            // this.selectedCurve = -1;
-            for (var j = 0; j < this.curves.length; ++j ) {
-                var ctl_idx = this.curves[j].getClickedHandle(
-                    (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y)
-                if (ctl_idx != -1) {
-                    console.log("Handle " + ctl_idx + " was pressed");
-                    this.selectedHandle = ctl_idx;
-                    this.selectedCurve = j;
-                    break;
-                }
-            }
-            
-            if (this.selectedHandle == -1) {
-                this.originalPosition = {x: this.position.x, y: this.position.y};
-            }
-        });
+        /* Pan */
+        hammer.on('panstart', (e) => { this.panStart(e.center.x, e.center.y); });
+        hammer.on('pan', (e) => { this.pan(e.changedPointers[0].clientX, e.changedPointers[0].clientY, e.deltaX, e.deltaY); });
+        hammer.on('panend', (e) => { this.panEnd(); });
 
-        hammer.on('pan', (e) => {
-            if (this.selectedHandle == -1) {
-                this.position.x = this.originalPosition.x + e.deltaX;
-                this.position.y = this.originalPosition.y + e.deltaY;
-            } else {
-                this.pointJustAdded = false;
-                this.curves[this.selectedCurve].moveHandle(this.selectedHandle, 
-                    (e.changedPointers[0].clientX - this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                    (e.changedPointers[0].clientY - this.gl.canvas.clientHeight/2.0) - this.position.y);
-            }
-        });
+        /* Press */
+        hammer.on('press', (e) => { this.press(e.center.x, e.center.y); });
+        hammer.on('pressup', (e) => { this.pressUp(); });
 
-        hammer.on('panend', (e) => {
-            if (this.selectedHandle == -1) {
-                this.originalPosition = this.position;
-            } else {
-                // this.selectedHandle = -1;
-            }
-        });
+        /* Pinch */
+        hammer.on('pinchstart', (e) =>  { this.panStart(e.center.x, e.center.y); });
 
-        hammer.on('press', (e) => {
-            if (this.selectedCurve != -1) {
-                if (this.curves[this.selectedCurve].getClickedHandle(
-                    (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                    (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y) == -1)
-                    {
-                        if (this.pointJustAdded == false ){
-                            this.curves[this.selectedCurve].addHandle(
-                                (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                                (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
-                            this.selectedHandle = (this.curves[this.selectedCurve].controlPoints.length / 3) - 1;
-                        } else {
-                            this.curves[this.selectedCurve].moveHandle(this.selectedHandle,
-                                (e.center.x - + this.gl.canvas.clientWidth/2.0) - this.position.x, 
-                                (e.center.y - this.gl.canvas.clientHeight/2.0) - this.position.y);
-                        }                
-                        this.pointJustAdded = true;
-                    }
-                }
-        });
+        hammer.on('pinch', (e) => { this.pan(e.changedPointers[0].clientX, e.changedPointers[0].clientY, e.deltaX, e.deltaY); });
+        hammer.on('pinchend', (e) => { this.panEnd(); });
 
-        hammer.on('pressup', (e) => {
-            this.pointJustAdded = false;
-        });
+        /* Double tap */
+        hammer.on('doubletap', (e) => { this.doubleTap(); });
 
-        // hammer.on('pinch', function (e) {
-        //     // We only calculate the pinch center on the first pinch event as we want the center to
-        //     // stay consistent during the entire pinch
-        //     if (pinchCenter === null) {
-        //         pinchCenter = rawCenter(e);
-        //         var offsetX = pinchCenter.x * scale - (-x * scale + Math.min(viewportWidth, curWidth) / 2);
-        //         var offsetY = pinchCenter.y * scale - (-y * scale + Math.min(viewportHeight, curHeight) / 2);
-        //         pinchCenterOffset = { x: offsetX, y: offsetY };
-        //     }
-
-        //     // When the user pinch zooms, she/he expects the pinch center to remain in the same
-        //     // relative location of the screen. To achieve this, the raw zoom center is calculated by
-        //     // first storing the pinch center and the scaled offset to the current center of the
-        //     // image. The new scale is then used to calculate the zoom center. This has the effect of
-        //     // actually translating the zoom center on each pinch zoom event.
-        //     var newScale = restrictScale(scale * e.scale);
-        //     var zoomX = pinchCenter.x * newScale - pinchCenterOffset.x;
-        //     var zoomY = pinchCenter.y * newScale - pinchCenterOffset.y;
-        //     var zoomCenter = { x: zoomX / newScale, y: zoomY / newScale };
-
-        //     zoomAround(e.scale, zoomCenter.x, zoomCenter.y, true);
-        // });
-
-        // hammer.on('pinchend', function (e) {
-        //     updateLastScale();
-        //     updateLastPos();
-        //     pinchCenter = null;
-        // });
-
-        // hammer.on('doubletap', function (e) {
-        //     var c = rawCenter(e);
-        //     zoomAround(2, c.x, c.y);
-        // });
-
-        
-        
-        Curve.Initialize(this.gl);
-        this.curves = [];
-        // for (let i = 0; i < 1; ++i) {
-        //     this.curves.push(new Curve());
-        // }
-        
+        /* Setup keyboard shortcuts */
         document.onkeyup = (e) => {
             console.log("The key code is: " + e.keyCode);
-            if (e.keyCode == 67) {
-                this.hideCurves();
-            }
-
-            if (e.keyCode == 76) {
-                this.hideControlPolygons();
-            }
-
-            if (e.keyCode == 80) {
-                this.hideControlHandles();
-            }
-
-            if (e.keyCode == 65) {
-                if (this.selectedCurve != -1) {
-                    console.log("Adding new point");
-                    this.curves[this.selectedCurve].addHandle(-this.position.x, -this.position.y);
-                }
-            }
-
-            if (e.keyCode == 46) {
-                if (this.selectedCurve != -1 && this.selectedHandle != -1) {
-                    if (this.curves[this.selectedCurve].controlPoints.length <= 3) {
-                        this.curves.splice(this.selectedCurve, 1);
-                        this.selectedCurve = -1;
-                        this.selectedHandle = -1;
-                    } else {
-                        console.log("Deleting point");
-                        this.curves[this.selectedCurve].removeHandle(this.selectedHandle);
-                        this.selectedHandle = -1;
-                    }
-                }
-            }
-
-            if (e.keyCode == 78) {
-                this.curves.push(new Curve(-this.position.x, -this.position.y))
-            }
-
-            this.canvas.oncontextmenu=function(e){
-                e.preventDefault();
-                return false;
-            }
+            if (e.keyCode == 67) this.hideCurves();
+            if (e.keyCode == 76) this.hideControlPolygons();
+            if (e.keyCode == 80) this.hideControlHandles();
+            if (e.keyCode == 65) this.addHandle();
+            if (e.keyCode == 46) this.deleteLastHandle();
+            if (e.keyCode == 78) this.newCurve();
         };
+
+        /* Prevent right clicking the webgl canvas */
+        this.canvas.oncontextmenu = function (e) {
+            e.preventDefault();
+            return false;
+        }
     }
 
+    /* Changes the webgl viewport to account for screen resizes */
     resize() {
         // Lookup the size the browser is displaying the canvas.
         var displayWidth = this.canvas.clientWidth;
@@ -211,50 +101,113 @@ class CurveEditor {
         }
     }
 
+    panStart(initialX, initialY) {
+        // console.log(e)
+        /* Check if we're moving a point */
+        this.selectedHandle = -1;
+        // this.selectedCurve = -1;
+        for (var j = 0; j < this.curves.length; ++j) {
+            var ctl_idx = this.curves[j].getClickedHandle(
+                (initialX - + this.gl.canvas.clientWidth / 2.0) - this.position.x,
+                (initialY - this.gl.canvas.clientHeight / 2.0) - this.position.y)
+            if (ctl_idx != -1) {
+                console.log("Handle " + ctl_idx + " was pressed");
+                this.selectedHandle = ctl_idx;
+                this.selectedCurve = j;
+                break;
+            }
+        }
+
+        if (this.selectedHandle == -1) {
+            this.originalPosition = { x: this.position.x, y: this.position.y };
+        }
+    }
+
+    pan(x, y, deltax, deltay) {
+        if (this.selectedHandle == -1) {
+            this.position.x = this.originalPosition.x + deltax;
+            this.position.y = this.originalPosition.y + deltay;
+        } else {
+            this.pointJustAdded = false;
+            this.curves[this.selectedCurve].moveHandle(this.selectedHandle,
+                (x - this.gl.canvas.clientWidth / 2.0) - this.position.x,
+                (y - this.gl.canvas.clientHeight / 2.0) - this.position.y);
+        }
+    }
+
+    panEnd() {
+        if (this.selectedHandle == -1) {
+            this.originalPosition = this.position;
+        }
+    }
+
+    press(x, y) {
+        if (this.selectedCurve != -1) {
+            if (this.curves[this.selectedCurve].getClickedHandle(
+                (x - + this.gl.canvas.clientWidth / 2.0) - this.position.x,
+                (y - this.gl.canvas.clientHeight / 2.0) - this.position.y) == -1) {
+                if (this.pointJustAdded == false) {
+                    this.curves[this.selectedCurve].addHandle(
+                        (x - + this.gl.canvas.clientWidth / 2.0) - this.position.x,
+                        (y - this.gl.canvas.clientHeight / 2.0) - this.position.y);
+                    this.selectedHandle = (this.curves[this.selectedCurve].controlPoints.length / 3) - 1;
+                } else {
+                    this.curves[this.selectedCurve].moveHandle(this.selectedHandle,
+                        (x - + this.gl.canvas.clientWidth / 2.0) - this.position.x,
+                        (y - this.gl.canvas.clientHeight / 2.0) - this.position.y);
+                }
+                this.pointJustAdded = true;
+            }
+        }
+    }
+
+    pressUp() {
+        this.pointJustAdded = false;
+    }
+
+    doubleTap() {
+        this.position.x = 0;
+        this.position.y = 0;
+    }
+
+    /* Draws the curves to the screen */
     render(now) {
         now *= 0.001;  // convert to seconds
         const deltaTime = now - this.then;
         this.then = now;
         let gl = this.gl;
-        
+
+        /* Set OpenGL state */
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clearDepth(1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        
-        const fieldOfView = 45 * Math.PI / 180;   // in radians
+
+        /* Setup the projection */
         const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-        const zNear = 0.1;
-        const zFar = 100.0;
-        const projectionMatrix = mat4.create();
-
-        // // note: glmatrix.js always has the first argument
-        // // as the destination to receive the result.
-        // mat4.perspective(projectionMatrix,
-        //     fieldOfView,
-        //     aspect,
-        //     zNear,
-        //     zFar);
-
-        mat4.ortho(projectionMatrix, -gl.canvas.clientWidth, gl.canvas.clientWidth, gl.canvas.clientHeight, -gl.canvas.clientHeight, -1.0, 1.0)
+        const orthoMatrix = mat4.create();
+        mat4.ortho(orthoMatrix, -gl.canvas.clientWidth, gl.canvas.clientWidth, gl.canvas.clientHeight, -gl.canvas.clientHeight, -1.0, 1.0)
         let zoom = vec3.create();
         vec3.set(zoom, this.zoom, this.zoom, 1.0);
-        mat4.scale(projectionMatrix, projectionMatrix, zoom);
+        mat4.scale(orthoMatrix, orthoMatrix, zoom);
 
+        /* Move the camera */
         const modelViewMatrix = mat4.create();
         mat4.translate(modelViewMatrix, modelViewMatrix, [this.position.x, this.position.y, -1.0]);
 
         /* Now draw our curves */
         for (let i = 0; i < this.curves.length; ++i) {
-            this.curves[i].draw(projectionMatrix, modelViewMatrix, aspect, 1000); //this.then * .2 * (i+1)
+            this.curves[i].draw(orthoMatrix, modelViewMatrix, aspect, now);
         }
     }
 
+    /* Adds a new curve to the scene */
     newCurve() {
         this.curves.push(new Curve(-this.position.x, -this.position.y))
     }
 
+    /* Deletes the last clicked handle */
     deleteLastHandle() {
         if (this.selectedCurve != -1 && this.selectedHandle != -1) {
             if (this.curves[this.selectedCurve].controlPoints.length <= 3) {
@@ -269,23 +222,41 @@ class CurveEditor {
         }
     }
 
+    addHandle() {
+        if (this.selectedCurve != -1) {
+            this.curves[this.selectedCurve].addHandle(-this.position.x, -this.position.y);
+        }
+    }
+
+    /* Deletes the last modified curve */
+    deleteLastCurve() {
+        if (this.selectedCurve != -1) {
+            this.curves.splice(this.selectedCurve, 1);
+            this.selectedCurve = -1;
+            this.selectedHandle = -1;
+        }
+    }
+
+    /* Hides the control polygon connecting the curve handles */
     hideControlPolygons() {
         this.showControlPolygons = !this.showControlPolygons;
-        for (var j = 0; j < this.curves.length; ++j ) {
+        for (var j = 0; j < this.curves.length; ++j) {
             this.curves[j].showControlPolygon = this.showControlPolygons;
         }
     }
-    
+
+    /* Hides the handles which deform the curves */
     hideControlHandles() {
         this.showControlHandles = !this.showControlHandles;
-        for (var j = 0; j < this.curves.length; ++j ) {
+        for (var j = 0; j < this.curves.length; ++j) {
             this.curves[j].showControlPoints = this.showControlHandles;
         }
     }
-    
+
+    /* Hide the generated curves */
     hideCurves() {
         this.showCurves = !this.showCurves;
-        for (var j = 0; j < this.curves.length; ++j ) {
+        for (var j = 0; j < this.curves.length; ++j) {
             this.curves[j].showCurve = this.showCurves;
         }
     }

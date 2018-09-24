@@ -13,14 +13,21 @@
 <body>
     <canvas id="glCanvas"></canvas>
     <div id=GUI>
-        <button type="button" onclick="GoFullscreen();">Click Me!</button>
-        <button id="newCurve" type="button">Add Curve</button>
-        <button id="Delete" type="button">Delete Handle</button>
-        <button id="HideControlPolygons" type="button">HideControlPolygons</button>
-        <button id="HideControlHandles" type="button">HideControlHandles</button>
-        <button id="HideCurves" type="button">HideCurves</button>
-
-        <input id="UploadFile" type="file">
+        <!-- <div id = "Menu"> -->
+            <button id="FullScreen">Full Screen</button>
+            <button id="newCurve" type="button">Add Curve</button>
+            <button id="Delete" type="button">Delete Handle</button>
+            <button id="DeleteCurve" type="button">Delete Curve</button>
+            <button id="HideControlPolygons" type="button">Toggle Control Polygons</button>
+            <button id="HideControlHandles" type="button">Toggle Control Handles</button>
+            <button id="HideCurves" type="button">Toggle Curves</button>
+            <button id="Save" type="button">Save Curve</button>
+            <button onclick="document.getElementById('UploadFile').click();">Upload Curve</button>
+            <input id="UploadFile" style="display:none;" type="file"/>
+            <p>Click and drag to move the camera.</p>
+            <p>Double click to reset camera.</p>
+            <p>Click and hold to add a control point.</p>
+        <!-- </div> -->
     </div>
 </body>
     <script src="./Scripts/jquery-3.3.1.js"></script>
@@ -28,13 +35,3 @@
     <script src="./Scripts/gl-matrix.js"></script>
     <script type="module" src="./Scripts/main.js"></script>
 </html>
-<script>
-    function GoFullscreen() {
-        var elem = document.getElementById("myvideo");
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen();
-        } else if (elem.webkitRequestFullScreen) {
-            elem.webkitRequestFullScreen();
-        }
-    }
-</script>

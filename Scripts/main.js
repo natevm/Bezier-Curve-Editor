@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var deleteButton = document.getElementById("Delete");
     deleteButton.addEventListener("click", (e) => { curveEditor.deleteLastHandle() })
 
+    var deleteCurveButton = document.getElementById("DeleteCurve");
+    deleteCurveButton.addEventListener("click", (e) => { curveEditor.deleteLastCurve() })
+
     var hideControlPolygonButton = document.getElementById("HideControlPolygons");
     hideControlPolygonButton.addEventListener("click", (e) => { curveEditor.hideControlPolygons() })
 
@@ -89,14 +92,56 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 curveEditor.curves.push(curves[i])
-
-
             }
-
             console.log(lines);
         }
         reader.readAsText(selectedFile);
     });
+
+
+    // Function to download data to a file
+    function download(data, filename, type) {
+        var file = new Blob([data], {type: type});
+        if (window.navigator.msSaveOrOpenBlob) // IE10+
+            window.navigator.msSaveOrOpenBlob(file, filename);
+        else { // Others
+            var a = document.createElement("a"),
+                    url = URL.createObjectURL(file);
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);  
+            }, 0); 
+        }
+    }
+
+    var Save = document.getElementById("Save");
+    Save.addEventListener("click", (e) => { 
+        var text = ""
+        text += curveEditor.curves.length + "\n"
+        for (var i = 0; i < curveEditor.curves.length; ++i) {
+            text += "P " + (curveEditor.curves[i].controlPoints.length / 3) + "\n";
+            for (var j = 0; j < curveEditor.curves[i].controlPoints.length / 3; ++j) {
+                text += curveEditor.curves[i].controlPoints[j * 3 + 0] / 50.0 + "    ";
+                text += curveEditor.curves[i].controlPoints[j * 3 + 1] / -50.0 + "\n"
+            }
+        }
+        download(text, "Curve.dat", "dat")
+        })
+
+    var FullScreen = document.getElementById("FullScreen");
+    FullScreen.addEventListener("click", (e) => {
+        var elem = document.getElementById("myvideo");
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullScreen) {
+            elem.webkitRequestFullScreen();
+        }
+    });
+
 });
 
 window.onresize = function () {

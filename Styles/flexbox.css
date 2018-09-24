@@ -32,6 +32,20 @@ canvas {
 
 #GUI {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    height: 100%;
     top: 0;
     left: 0;
 }
+
+button {
+    width: 5em;
+    height: 5em;
+}
+
+/* input {
+    width: 5em;
+    height: 5em;
+} */
