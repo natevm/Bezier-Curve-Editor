@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 text += curveEditor.curves[i].controlPoints[j * 3 + 1] / -50.0 + "\n"
             }
         }
-        download(text, "Curve.dat", "dat")
+        download(text, "Curve.dat", "text")
         })
 
     var FullScreen = document.getElementById("FullScreen");

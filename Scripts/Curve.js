@@ -132,8 +132,8 @@ class Curve {
         this.numSamples = 200;
         this.thickness = 20.0;
         this.controlPoints = [
-            -300.0 + x, y, 0.0,
-            300.0 + x, y, 0.0,
+            -100.0 + x, y, 0.0,
+            100.0 + x, y, 0.0,
         ];
 
         this.handleRadius = 40;

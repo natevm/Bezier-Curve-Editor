@@ -35,8 +35,9 @@ canvas {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    height: 100%;
-    top: 0;
+    /* height: 70%; */
+    top: 15%;
+    bottom: 5%;
     left: 0;
 }
 
