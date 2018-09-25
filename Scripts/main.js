@@ -74,8 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw message; // Fallback
             }
         }
-
+        
         var selectedFile = event.target.files[0];
+        var filename = event.target.files[0].name;
         var reader = new FileReader();
         reader.onload = (event) => {
             var lines = event.target.result.split("\n");
@@ -111,6 +112,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
+                if (filename.endsWith(".crv")) {
+                    curves[i].showCurve = false; 
+                    curves[i].showControlPolygon = true;
+                    curves[i].showControlPoints = false;
+                }
                 curveEditor.curves.push(curves[i])
             }
             console.log(lines);
