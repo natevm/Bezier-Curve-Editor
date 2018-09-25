@@ -285,7 +285,7 @@ class CurveEditor {
 
     /* Adds a new curve to the scene */
     newCurve() {
-        this.curves.push(new Curve(-this.position.x/this.zoom, -this.position.y/this.zoom))
+        this.curves.push(new Curve(-this.position.x, -this.position.y))
         this.selectedCurve = this.curves.length - 1;
     }
 
