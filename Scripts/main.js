@@ -31,6 +31,24 @@ document.addEventListener('DOMContentLoaded', function () {
     var hideCurves = document.getElementById("HideCurves");
     hideCurves.addEventListener("click", (e) => { curveEditor.hideCurves() })
 
+
+    
+    
+    
+
+    var addToFront = document.getElementById("ToggleFrontMode");
+    addToFront.addEventListener("click", (e) => { curveEditor.setAddMode(true, false, false) })
+
+    var addToBack = document.getElementById("ToggleEndMode");
+    addToBack.addEventListener("click", (e) => { curveEditor.setAddMode(false, true, false) })
+
+    var addToClosest = document.getElementById("ToggleClosestMode");
+    addToClosest.addEventListener("click", (e) => { curveEditor.setAddMode(false, false, true) })
+
+
+
+
+
     var UploadFileButton = document.getElementById("UploadFile");
     UploadFileButton.addEventListener("change", (e) => {
         function cleanArray(actual) {
@@ -88,7 +106,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     var y = parseFloat(strArray[1])
                     console.log("x: " + x + " y: " + y); 
                     lines = lines.splice(1)
-                    curves[i].controlPoints.push(x * 50.0, -y * 50.0, 0.0)
+                    if (numPoints < 64 || j%2 == 0) {
+                        curves[i].controlPoints.push(x * 50.0, -y * 50.0, 0.0)
+                    }
                 }
 
                 curveEditor.curves.push(curves[i])

@@ -36,11 +36,11 @@ body, input, select, textarea {
         font-weight: 100;
     }
 
-    .p {
+    .text {
     	fill: rgba(255, 255, 255, 1.0);
     	font-family: "Roboto", Helvetica, sans-serif;
 
-    	font-size: 1.5vw;
+    	font-size: 3.0vw;
         font-weight: 100;
     }
 }
@@ -56,18 +56,18 @@ body, input, select, textarea {
     }
 
     .h {
-    fill: rgba(255, 255, 255, 1.0);
-    font-family: "Roboto", Helvetica, sans-serif;
+        fill: rgba(255, 255, 255, 1.0);
+        font-family: "Roboto", Helvetica, sans-serif;
 
-    font-size: 1.5vw;
-    font-weight: 100;
-}
+        font-size: 1.5vw;
+        font-weight: 100;
+    }
 
-.p {
-    fill: rgba(255, 255, 255, 1.0);
-    font-family: "Roboto", Helvetica, sans-serif;
+    .text {
+        fill: rgba(255, 255, 255, 1.0);
+        font-family: "Roboto", Helvetica, sans-serif;
 
-    font-size: 1vw;
-    font-weight: 100;
-}
+        font-size: 1.5vw;
+        font-weight: 100;
+    }
 }
