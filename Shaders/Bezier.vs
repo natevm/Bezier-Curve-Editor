@@ -13,7 +13,7 @@ uniform float thickness;
 uniform int miter;
 
 uniform int uNumControlPoints;
-uniform lowp vec3 uControlPoints[128];
+uniform lowp vec3 uControlPoints[100];
 
 varying lowp vec4 vColor;
 // varying lowp vec3 vOffset;
