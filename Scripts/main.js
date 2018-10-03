@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     var y = parseFloat(strArray[1])
                     console.log("x: " + x + " y: " + y); 
                     lines = lines.splice(1)
-                    if (numPoints < 64 || j%2 == 0) {
+                    if (numPoints < 100 || j%2 == 0) {
                         curves[i].controlPoints.push(x * 50.0, -y * 50.0, 0.0)
                     }
                 }
