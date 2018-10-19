@@ -64,7 +64,8 @@ class CurveEditor {
             if (this.zooming) return;
             this.panStart(
                 e.changedPointers[0].clientX / this.zoom - (this.gl.canvas.clientWidth / (2.0 * this.zoom)), 
-                e.changedPointers[0].clientY / this.zoom - (this.gl.canvas.clientHeight / (2.0 * this.zoom))); 
+                e.changedPointers[0].clientY / this.zoom - (this.gl.canvas.clientHeight / (2.0 * this.zoom)),
+	    e.deltaX / this.zoom, e.deltaY / this.zoom); 
             });
         hammer.on('pan', (e) => { 
             if (this.zooming) return;
