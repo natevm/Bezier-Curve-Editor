@@ -55,12 +55,16 @@ class CurveEditor {
             threshold: 0
         });
 
+	hammer.get('press').set({ 
+            time: 500
+	});
+
         /* Pan */
         hammer.on('panstart', (e) => { 
             if (this.zooming) return;
             this.panStart(
-                e.center.x / this.zoom - (this.gl.canvas.clientWidth / (2.0 * this.zoom)), 
-                e.center.y / this.zoom - (this.gl.canvas.clientHeight / (2.0 * this.zoom))); 
+                e.changedPointers[0].clientX / this.zoom - (this.gl.canvas.clientWidth / (2.0 * this.zoom)), 
+                e.changedPointers[0].clientY / this.zoom - (this.gl.canvas.clientHeight / (2.0 * this.zoom))); 
             });
         hammer.on('pan', (e) => { 
             if (this.zooming) return;
@@ -146,14 +150,14 @@ class CurveEditor {
         }
     }
 
-    panStart(initialX, initialY) {
+    panStart(initialX, initialY, deltaX, deltaY) {
         this.panning = true;
         // console.log(e)
         /* Check if we're moving a point */
         this.selectedHandle = -1;
         // this.selectedCurve = -1;
         for (var j = 0; j < this.curves.length; ++j) {
-            var ctl_idx = this.curves[j].getClickedHandle( initialX - this.position.x, initialY - this.position.y);
+            var ctl_idx = this.curves[j].getClickedHandle( (initialX-deltaX) - this.position.x, (initialY-deltaY) - this.position.y);
             if (ctl_idx != -1) {
                 console.log("Handle " + ctl_idx + " was pressed");
                 this.selectedHandle = ctl_idx;
