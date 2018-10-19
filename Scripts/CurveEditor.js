@@ -120,10 +120,10 @@ class CurveEditor {
 
         document.addEventListener('wheel', (e) => {
             if (e.deltaY < 0.0) {
-                this.zoom /= -e.deltaY * .01;
+                this.zoom -= -e.deltaY * .0001;
             } else {
 
-                this.zoom *= e.deltaY * .01;
+                this.zoom += e.deltaY * .0001;
             }
             console.log(e);
             }, { capture: false, passive: true})
